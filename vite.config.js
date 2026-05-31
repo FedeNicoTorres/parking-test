@@ -7,5 +7,5 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  base: 'https://github.com/FedeNicoTorres/parking-test/', // <--- ¡REVISÁ ESTO! Tiene que coincidir con el nombre de tu repo
+  base: '/parking-test/',
 })
