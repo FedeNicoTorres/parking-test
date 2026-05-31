@@ -181,7 +181,7 @@ export default function App() {
             <nav className="space-y-1">
               <button onClick={() => { setVista('ingreso'); setLiquidacion(null); }} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'ingreso' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>📥 Registrar Entrada</button>
               <button onClick={() => setVista('salida')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'salida' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>💸 Cobrar Salida</button>
-              <button onClick={() => setVista('listado')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'listado' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>🚗 Vehículos Adentro</button>
+              <button onClick={() => setVista('listado')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'listado' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>🚗 Vehículos ingresados</button>
               <button onClick={() => setVista('caja')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'caja' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>💰 Auditoría Caja</button>
               
               <div className="pt-4 my-2 border-t border-slate-100">
