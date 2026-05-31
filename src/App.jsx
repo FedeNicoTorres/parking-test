@@ -1,5 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+
+// --- NUEVAS IMPORTACIONES DE FIREBASE ---
+import { db } from './firebase'; 
+import { 
+  collection, 
+  addDoc, 
+  onSnapshot, 
+  doc, 
+  deleteDoc 
+} from 'firebase/firestore';
 
 export default function App() {
   // --- ESTADOS GLOBALES ---
@@ -23,19 +33,56 @@ export default function App() {
     { id: '3', tipo_vehiculo: 'Camioneta / SUV', precio_hora: 1800 },
   ]);
 
-  const [vehiculosActivos, setVehiculosActivos] = useState([
-    { id: 1, patente: 'AA123BB', tipo_nombre: 'Automóvil', tipo_id: '1', hora_ingreso: new Date(Date.now() - 75 * 60000) },
-    { id: 2, patente: 'POV987', tipo_nombre: 'Motocicleta', tipo_id: '2', hora_ingreso: new Date(Date.now() - 30 * 60000) }
-  ]);
+  // Inicializamos vacíos porque ahora vienen de la nube en tiempo real
+  const [vehiculosActivos, setVehiculosActivos] = useState([]);
+  const [historialPagos, setHistorialPagos] = useState([]);
 
-  const [historialPagos, setHistorialPagos] = useState([
-    { id: 1, patente: 'WMK442', tipo_vehiculo: 'Automóvil', minutos_totales: 60, monto_pagado: 1200 }
-  ]);
+  // --- ESCUCHAR FIREBASE EN TIEMPO REAL (onSnapshot) ---
+  useEffect(() => {
+    // 1. Escuchar vehículos activos
+    const qVehiculos = collection(db, 'vehiculosActivos');
+    const unsubscribeVehiculos = onSnapshot(qVehiculos, (snapshot) => {
+      const autosNube = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id, // Usamos el ID real de Firebase
+          patente: data.patente,
+          tipo_nombre: data.tipo_nombre,
+          tipo_id: data.tipo_id,
+          // Convertimos el Timestamp de Firebase a un Date de JavaScript válido
+          hora_ingreso: data.hora_ingreso ? data.hora_ingreso.toDate() : new Date()
+        };
+      });
+      // Los ordenamos para que el más nuevo aparezca arriba
+      setVehiculosActivos(autosNube.sort((a, b) => b.hora_ingreso - a.hora_ingreso));
+    });
+
+    // 2. Escuchar historial de pagos
+    const qPagos = collection(db, 'historialPagos');
+    const unsubscribePagos = onSnapshot(qPagos, (snapshot) => {
+      const pagosNube = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          patente: data.patente,
+          tipo_vehiculo: data.tipo_vehiculo,
+          minutos_totales: data.minutos_totales,
+          monto_pagado: data.monto_pagado,
+          fecha: data.fecha ? data.fecha.toDate() : new Date()
+        };
+      });
+      setHistorialPagos(pagosNube.sort((a, b) => b.fecha - a.fecha));
+    });
+
+    return () => {
+      unsubscribeVehiculos();
+      unsubscribePagos();
+    };
+  }, []);
 
   // --- LÓGICA DE LOGIN ---
   const manejarLogin = (e) => {
     e.preventDefault();
-    // Credenciales de prueba fijas
     if (usuario === 'admin' && password === 'admin123') {
       setIsAdmin(true);
       setErrorLogin('');
@@ -51,8 +98,8 @@ export default function App() {
     setVista('ingreso');
   };
 
-  // --- LÓGICA DE INGRESO ---
-  const registrarIngreso = (e) => {
+  // --- LÓGICA DE INGRESO (MODIFICADA PARA GUARDAR EN LA NUBE) ---
+  const registrarIngreso = async (e) => {
     e.preventDefault();
     if (vehiculosActivos.length >= totalPlazas) return alert('¡Estacionamiento Lleno!');
     
@@ -65,21 +112,27 @@ export default function App() {
     
     const tarifaSeleccionada = tarifas.find(t => t.id === tipoVehiculoId);
     
-    const nuevo = {
-      id: Date.now(),
+    const nuevoAuto = {
       patente: patenteLimpia,
       tipo_nombre: tarifaSeleccionada ? tarifaSeleccionada.tipo_vehiculo : 'Vehículo',
       tipo_id: tipoVehiculoId,
-      hora_ingreso: new Date()
+      hora_ingreso: new Date() // Firestore acepta objetos Date nativos
     };
-    
-    setVehiculosActivos([nuevo, ...vehiculosActivos]);
-    setUltimoIngresado(nuevo);
-    setPatenteIngreso('');
 
-    setTimeout(() => {
-      window.print();
-    }, 150);
+    try {
+      // Guardamos en la colección de Firebase
+      await addDoc(collection(db, 'vehiculosActivos'), nuevoAuto);
+      
+      setUltimoIngresado(nuevoAuto);
+      setPatenteIngreso('');
+
+      setTimeout(() => {
+        window.print();
+      }, 150);
+    } catch (error) {
+      console.error("Error al guardar en Firebase:", error);
+      alert("Hubo un problema al registrar el ingreso en la nube.");
+    }
   };
 
   // --- LÓGICA DE SALIDA ---
@@ -89,43 +142,59 @@ export default function App() {
     const auto = vehiculosActivos.find(v => v.patente === patenteBuscar);
     if (!auto) return alert('La patente no se encuentra registrada adentro.');
 
-    const tarifa = tarifas.find(t => t.id === auto.tipo_id);
+    const BlackTarifa = tarifas.find(t => t.id === auto.tipo_id);
     const minutos = Math.ceil((new Date() - auto.hora_ingreso) / 60000);
     const horasACobrar = minutos <= 10 ? 0 : Math.ceil(minutos / 60);
-    const total = horasACobrar * tarifa.precio_hora;
+    const total = horasACobrar * BlackTarifa.precio_hora;
 
     setLiquidacion({
-      id: auto.id,
+      id: auto.id, // Este id ahora es la cadena de texto de Firebase
       patente: auto.patente,
-      tipo: tarifa.tipo_vehiculo,
+      tipo: BlackTarifa.tipo_vehiculo,
       tiempo: `${minutos} min`,
       total: total,
       minutosRaw: minutos
     });
   };
 
-  const confirmarCobro = () => {
-    setHistorialPagos([
-      {
-        id: Date.now(),
+  // --- CONFIRMAR COBRO (MODIFICADA PARA BORRAR Y CREAR REGISTRO) ---
+  const confirmarCobro = async () => {
+    try {
+      // 1. Agregar el registro de pago a la nube
+      await addDoc(collection(db, 'historialPagos'), {
         patente: liquidacion.patente,
         tipo_vehiculo: liquidacion.tipo,
-        minutos_totales: liquidacion.minutosRaw, // Corregido el nombre para evitar NaN
-        monto_pagado: liquidacion.total
-      },
-      ...historialPagos
-    ]);
-    setVehiculosActivos(vehiculosActivos.filter(v => v.id !== liquidacion.id));
-    setLiquidacion(null);
-    setPatenteSalida('');
+        minutos_totales: liquidacion.minutosRaw,
+        monto_pagado: liquidacion.total,
+        fecha: new Date()
+      });
+
+      // 2. Eliminar el vehículo de los activos en la nube usando su ID único
+      await deleteDoc(doc(db, 'vehiculosActivos', liquidacion.id));
+
+      setLiquidacion(null);
+      setPatenteSalida('');
+    } catch (error) {
+      console.error("Error al procesar el cobro en la nube:", error);
+      alert("Error de conexión con la base de datos.");
+    }
   };
 
-  // --- CIERRE DE CAJA ---
-  const ejecutarCierreCaja = () => {
+  // --- CIERRE DE CAJA (MODIFICADO PARA BORRAR HISTORIAL DIARIO) ---
+  const ejecutarCierreCaja = async () => {
     if (window.confirm(`¿Está seguro de realizar el Cierre de Caja?\nSe totalizarán $${cajaDelDia} y se reiniciará el historial diario.`)) {
-      alert(`📊 Cierre Exitoso\nTotal Recaudado: $${cajaDelDia}\nOperaciones totales: ${historialPagos.length}`);
-      setHistorialPagos([]); // Limpia la caja del día
-      setVista('ingreso');
+      
+      try {
+        alert(`📊 Cierre Exitoso\nTotal Recaudado: $${cajaDelDia}\nOperaciones totales: ${historialPagos.length}`);
+        
+        // Eliminamos uno por uno los registros del historial diario en la nube
+        const promesasBorrado = historialPagos.map(p => deleteDoc(doc(db, 'historialPagos', p.id)));
+        await Promise.all(promesasBorrado);
+
+        setVista('ingreso');
+      } catch (error) {
+        console.error("Error en cierre de caja:", error);
+      }
     }
   };
 
@@ -136,12 +205,11 @@ export default function App() {
     ? Math.round(historialPagos.reduce((acc, p) => acc + p.minutos_totales, 0) / historialPagos.length) 
     : 0;
 
-  // Desglose detallado por tipo de vehículo
   const operacionesPorTipo = tarifas.map(t => {
     const filtrados = historialPagos.filter(p => p.tipo_vehiculo === t.tipo_vehiculo);
     return {
       tipo: t.tipo_vehiculo,
-      cantidad: filtrados.length,
+      amount: filtrados.length,
       total: filtrados.reduce((acc, cur) => acc + cur.monto_pagado, 0)
     };
   });
@@ -149,7 +217,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col md:flex-row antialiased">
       
-      {/* 🧾 TICKET DE IMPRESIÓN (Oculto en pantalla digital) */}
+      {/* 🧾 TICKET DE IMPRESIÓN */}
       {ultimoIngresado && (
         <div id="ticket-impresion" className="hidden print:block bg-white text-black p-4 font-mono text-sm tracking-tight w-[58mm] mx-auto text-center">
           <p className="font-bold text-lg uppercase tracking-wide">PARKFLOW S.A.</p>
@@ -172,7 +240,6 @@ export default function App() {
         {/* MENÚ LATERAL */}
         <aside className="w-full md:w-64 bg-white border-b md:border-b-0 md:border-r border-slate-100 p-6 flex flex-col justify-between">
           <div>
-            {/* LOGO INTERACTIVO "P" (Vuelve al inicio) */}
             <button onClick={() => { setVista('ingreso'); setLiquidacion(null); }} className="flex items-center space-x-3 mb-8 px-2 group text-left w-full focus:outline-none">
               <div className="h-8 w-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-sm group-hover:bg-indigo-700 transition-colors">P</div>
               <span className="text-lg font-bold tracking-tight text-slate-900 group-hover:text-indigo-600 transition-colors">ParkFlow</span>
@@ -192,30 +259,20 @@ export default function App() {
             </nav>
           </div>
 
-          {/* INDICADOR DE OCUPACIÓN Y LOGIN STATUS */}
-          <div className="mt-8 pt-4 border-t border-slate-100 px-2 space-y-4">
-            <div>
-              <div className="flex justify-between text-xs font-semibold text-slate-400 mb-1.5">
-                <span>OCUPACIÓN</span>
-                <span>{vehiculosActivos.length} / {totalPlazas}</span>
-              </div>
-              <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                <div className={`h-full transition-all duration-500 rounded-full ${vehiculosActivos.length / totalPlazas > 0.85 ? 'bg-rose-500' : 'bg-indigo-600'}`} style={{ width: `${Math.min((vehiculosActivos.length / totalPlazas) * 100, 100)}%` }}></div>
-              </div>
+          <div>
+            <div className="flex justify-between text-xs font-semibold text-slate-400 mb-1.5">
+              <span>OCUPACIÓN</span>
+              <span>{vehiculosActivos.length} / {totalPlazas}</span>
             </div>
-
-            {isAdmin && (
-              <button onClick={cerrarSesion} className="w-full bg-slate-100 text-slate-600 py-2 rounded-xl text-xs font-medium hover:bg-rose-50 hover:text-rose-600 transition-colors">
-                🔒 Cerrar Sesión Admin
-              </button>
-            )}
+            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <div className={`h-full transition-all duration-500 rounded-full ${vehiculosActivos.length / totalPlazas > 0.85 ? 'bg-rose-500' : 'bg-indigo-600'}`} style={{ width: `${Math.min((vehiculosActivos.length / totalPlazas) * 100, 100)}%` }}></div>
+            </div>
           </div>
         </aside>
 
         {/* CONTENIDO PRINCIPAL */}
         <main className="flex-1 p-6 md:p-10 max-w-5xl">
           
-          {/* CONTROL DE PROTECCIÓN LOGIN PARA RUTA ADMIN / CONFIG */}
           {(!isAdmin && (vista === 'admin' || vista === 'config')) ? (
             <div className="max-w-md mx-auto bg-white p-8 rounded-2xl shadow-sm border border-slate-100 mt-12">
               <div className="text-center mb-6">
@@ -237,11 +294,9 @@ export default function App() {
                   Verificar Identidad
                 </button>
               </form>
-              <p className="text-[11px] text-slate-400 text-center mt-4">Pista desarrollo: admin / admin123</p>
             </div>
           ) : (
             <>
-              {/* VISTAS PÚBLICAS Y PROTEGIDAS YA VALIDADAS */}
               <header className="flex justify-between items-center mb-10 pb-4 border-b border-slate-100">
                 <div>
                   <h1 className="text-2xl font-bold tracking-tight text-slate-900 capitalize">
@@ -340,7 +395,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* VISTA NUEVA: AUDITORÍA DE CAJA Y CIERRE JORNADA */}
+              {/* VISTA: AUDITORÍA DE CAJA */}
               {vista === 'caja' && (
                 <div className="space-y-6">
                   <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-100">
@@ -350,7 +405,7 @@ export default function App() {
                         <div key={index} className="py-4 flex justify-between items-center">
                           <div>
                             <p className="text-sm font-bold text-slate-800">{item.tipo}</p>
-                            <p className="text-xs text-slate-400">{item.cantidad} transacciones concretadas</p>
+                            <p className="text-xs text-slate-400">{item.amount} transacciones concretadas</p>
                           </div>
                           <span className="text-base font-bold text-slate-900">${item.total}</span>
                         </div>
@@ -377,7 +432,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* VISTA: DASHBOARD PROTEGIDO */}
+              {/* VISTA: DASHBOARD ADMIN */}
               {vista === 'admin' && (
                 <div className="space-y-8">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -387,7 +442,6 @@ export default function App() {
                     </div>
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Estadía Promedio</p>
-                      {/* Corregido el cálculo para que nunca dé NaN */}
                       <p className="text-3xl font-bold text-slate-800 mt-2">{estadiaPromedio} <span className="text-sm font-normal text-slate-400">minutos</span></p>
                     </div>
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
@@ -412,7 +466,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* VISTA: CONFIGURACIÓN PROTEGIDA */}
+              {/* VISTA: CONFIGURACIÓN */}
               {vista === 'config' && (
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 max-w-xl mx-auto">
                   <h2 className="text-lg font-bold text-slate-900 mb-6 border-b border-slate-100 pb-3">Estructura de Costos</h2>
