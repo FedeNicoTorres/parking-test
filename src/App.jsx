@@ -182,7 +182,7 @@ export default function App() {
               <button onClick={() => { setVista('ingreso'); setLiquidacion(null); }} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'ingreso' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>📥 Registrar Entrada</button>
               <button onClick={() => setVista('salida')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'salida' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>💸 Cobrar Salida</button>
               <button onClick={() => setVista('listado')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'listado' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>🚗 Vehículos ingresados</button>
-              <button onClick={() => setVista('caja')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'caja' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>💰 Auditoría Caja</button>
+              <button onClick={() => setVista('caja')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'caja' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>💰 Movimientos de Caja</button>
               
               <div className="pt-4 my-2 border-t border-slate-100">
                 <span className="px-4 text-[10px] font-bold text-slate-400 tracking-wider block mb-2 uppercase">Gestión Gerencial</span>
@@ -312,7 +312,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* VISTA: VEHÍCULOS ADENTRO */}
+              {/* VISTA: VEHÍCULOS Ingresados */}
               {vista === 'listado' && (
                 <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-100">
                   <div className="flex justify-between items-center mb-6">
@@ -392,7 +392,7 @@ export default function App() {
                     </div>
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ocupación Física</p>
-                      <p className="text-3xl font-bold text-indigo-600 mt-2">{vehiculosActivos.length} <span className="text-sm font-normal text-slate-400">autos adentro</span></p>
+                      <p className="text-3xl font-bold text-indigo-600 mt-2">{vehiculosActivos.length} <span className="text-sm font-normal text-slate-400">autos ingresados</span></p>
                     </div>
                   </div>
                   
