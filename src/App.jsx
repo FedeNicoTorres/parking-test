@@ -106,7 +106,7 @@ export default function App() {
     const patenteLimpia = patenteIngreso.toUpperCase().replace(/\s+/g, '');
     const yaExiste = vehiculosActivos.some(v => v.patente === patenteLimpia);
     if (yaExiste) {
-      alert(`⚠️ Error de Ingreso:\nLa patente "${patenteLimpia}" ya se encuentra adentro.`);
+      alert(`⚠️ Error de Ingreso:\nLa patente "${patenteLimpia}" ya se encuentra ingresada.`);
       return;
     }
     
@@ -140,7 +140,7 @@ export default function App() {
     e.preventDefault();
     const patenteBuscar = patenteSalida.toUpperCase().replace(/\s+/g, '');
     const auto = vehiculosActivos.find(v => v.patente === patenteBuscar);
-    if (!auto) return alert('La patente no se encuentra registrada adentro.');
+    if (!auto) return alert('La patente no se encuentra registrada.');
 
     const BlackTarifa = tarifas.find(t => t.id === auto.tipo_id);
     const minutos = Math.ceil((new Date() - auto.hora_ingreso) / 60000);
@@ -220,8 +220,8 @@ export default function App() {
       {/* 🧾 TICKET DE IMPRESIÓN */}
       {ultimoIngresado && (
         <div id="ticket-impresion" className="hidden print:block bg-white text-black p-4 font-mono text-sm tracking-tight w-[58mm] mx-auto text-center">
-          <p className="font-bold text-lg uppercase tracking-wide">PARKFLOW S.A.</p>
-          <p className="text-xs">Tel: 11-1234-5678</p>
+          <p className="font-bold text-lg uppercase tracking-wide">Nombre empresa</p>
+          <p className="text-xs">Tel: 11-67574710</p>
           <p className="my-2 border-b border-dashed border-black"></p>
           <p className="font-bold text-base mb-1">TICKET DE INGRESO</p>
           <div className="text-left space-y-1 my-3 text-xs">
@@ -248,8 +248,8 @@ export default function App() {
             <nav className="space-y-1">
               <button onClick={() => { setVista('ingreso'); setLiquidacion(null); }} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'ingreso' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>📥 Registrar Entrada</button>
               <button onClick={() => setVista('salida')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'salida' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>💸 Cobrar Salida</button>
-              <button onClick={() => setVista('listado')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'listado' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>🚗 Vehículos Adentro</button>
-              <button onClick={() => setVista('caja')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'caja' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>💰 Auditoría Caja</button>
+              <button onClick={() => setVista('listado')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'listado' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>🚗 Vehículos ingresados</button>
+              <button onClick={() => setVista('caja')} className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${vista === 'caja' ? 'bg-indigo-50 text-indigo-600 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}>💰 Movimientos de Caja</button>
               
               <div className="pt-4 my-2 border-t border-slate-100">
                 <span className="px-4 text-[10px] font-bold text-slate-400 tracking-wider block mb-2 uppercase">Gestión Gerencial</span>
@@ -344,7 +344,7 @@ export default function App() {
                         <input type="text" value={patenteSalida} onChange={e => setPatenteSalida(e.target.value)} placeholder="Ej: AA123BB" className="w-full rounded-xl border border-slate-200 p-3 text-lg font-mono tracking-widest uppercase focus:outline-none focus:border-indigo-500 transition-all" required />
                       </div>
                       <button type="submit" className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-semibold text-sm hover:bg-slate-800 transition shadow-sm mt-2">
-                        Calcular Liquidación
+                        Calcular cobro
                       </button>
                     </form>
                   ) : (
@@ -367,7 +367,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* VISTA: VEHÍCULOS ADENTRO */}
+              {/* VISTA: VEHÍCULOS Ingresados */}
               {vista === 'listado' && (
                 <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-100">
                   <div className="flex justify-between items-center mb-6">
@@ -422,7 +422,7 @@ export default function App() {
 
                   <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900">Finalizar Jornada Comercial</h3>
+                      <h3 className="text-sm font-bold text-slate-900">Finalizar Jornada</h3>
                       <p className="text-xs text-slate-400 mt-0.5">Esto reseteará la caja del día y guardará los totales del sistema.</p>
                     </div>
                     <button onClick={ejecutarCierreCaja} className="w-full sm:w-auto bg-rose-600 text-white text-sm font-semibold px-6 py-3 rounded-xl hover:bg-rose-700 transition shadow-sm shadow-rose-100">
@@ -446,7 +446,7 @@ export default function App() {
                     </div>
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                       <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Ocupación Física</p>
-                      <p className="text-3xl font-bold text-indigo-600 mt-2">{vehiculosActivos.length} <span className="text-sm font-normal text-slate-400">autos adentro</span></p>
+                      <p className="text-3xl font-bold text-indigo-600 mt-2">{vehiculosActivos.length} <span className="text-sm font-normal text-slate-400">autos ingresados</span></p>
                     </div>
                   </div>
                   
